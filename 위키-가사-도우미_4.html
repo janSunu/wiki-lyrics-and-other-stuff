@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>위키 가사 도우미</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #060606;
+      --bg2: #0a0a0a;
+      --bg3: #111;
+      --bg4: #1a1a1a;
+      --border: #222;
+      --border2: #333;
+      --text: #94a3b8;
+      --text2: #64748b;
+      --accent: #6366f1;
+      --accent-dim: rgba(99,102,241,0.1);
+    }
+
+    html, body { height: 100%; font-family: 'SF Mono', 'Fira Code', monospace; background: var(--bg); color: var(--text); }
+
+    /* ── Layout ── */
+    #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; height: 44px;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; z-index: 10;
+    }
+
+    .nav-left { display: flex; align-items: center; gap: 24px; height: 100%; }
+    .nav-brand { display: flex; align-items: center; gap: 10px; padding-right: 24px; border-right: 1px solid var(--border); }
+    .nav-brand svg { width: 16px; height: 16px; color: var(--accent); }
+    .nav-brand span { font-size: 12px; font-weight: 700; color: white; letter-spacing: -0.3px; }
+
+    .tabs { display: flex; height: 100%; }
+    .tab-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 20px; height: 100%;
+      font-size: 11px; font-weight: 600; font-family: inherit;
+      color: var(--text2); background: transparent; border: none;
+      border-right: 1px solid var(--border);
+      cursor: pointer; transition: all 0.15s;
+      position: relative; white-space: nowrap;
+    }
+    .tab-btn:hover { background: #0f0f0f; color: var(--text); }
+    .tab-btn.active { background: var(--bg3); color: white; }
+    .tab-btn.active::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--accent); box-shadow: 0 0 10px rgba(99,102,241,0.5);
+    }
+    .tab-btn svg { width: 13px; height: 13px; opacity: 0.4; }
+    .tab-btn.active svg { opacity: 1; color: var(--accent); }
+
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+    .nav-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; font-size: 10px; font-weight: 600; font-family: inherit;
+      color: var(--text2); background: var(--bg4); border: 1px solid var(--border2);
+      border-radius: 6px; cursor: pointer; transition: all 0.15s;
+    }
+    .nav-btn:hover { color: white; background: #252525; }
+    .nav-btn svg { width: 12px; height: 12px; color: var(--accent); }
+    .nav-btn-icon { padding: 6px 8px; }
+
+    /* ── Panels ── */
+    .panel { display: none; flex: 1; min-height: 0; }
+    .panel.active { display: flex; }
+
+    /* ── Editor panels ── */
+    .editor-surface { display: flex; flex: 1; min-height: 0; }
+    .col { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+    .col-divider { width: 1px; background: var(--border); flex-shrink: 0; }
+
+    .col-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; height: 36px;
+      background: var(--bg3); border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .col-label { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 700; color: var(--text2); }
+    .col-label svg { width: 12px; height: 12px; }
+    .col-label.accent { color: var(--accent); }
+    .col-label.accent svg { color: var(--accent); }
+
+    .copy-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 14px; font-size: 10px; font-weight: 700; font-family: inherit;
+      color: var(--text2); background: var(--bg4); border: 1px solid var(--border2);
+      border-radius: 5px; cursor: pointer; transition: all 0.15s;
+    }
+    .copy-btn:hover { color: white; border-color: rgba(99,102,241,0.5); }
+    .copy-btn.copied { color: #34d399; background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.4); }
+    .copy-btn svg { width: 12px; height: 12px; }
+
+    .col-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+
+    .line-nums {
+      width: 44px; flex-shrink: 0;
+      background: var(--bg2); border-right: 1px solid #1a1a1a;
+      display: flex; flex-direction: column; align-items: center;
+      padding-top: 20px; user-select: none; pointer-events: none;
+      font-size: 9px; line-height: 2.1; color: #1e293b; overflow: hidden;
+    }
+    .line-nums span.active-line { color: #312e81; }
+
+    textarea {
+      flex: 1; background: transparent; border: none; outline: none;
+      padding: 20px; font-size: 11px; font-family: inherit;
+      color: #cbd5e1; resize: none; line-height: 2.1;
+      caret-color: var(--accent);
+    }
+    textarea::placeholder { color: #1e293b; }
+    textarea::selection { background: rgba(99,102,241,0.2); }
+
+    .output-body {
+      flex: 1; overflow: auto; padding: 32px;
+      background: rgba(3,3,3,0.4);
+    }
+    .output-body pre {
+      font-size: 12px; font-family: inherit;
+      white-space: pre-wrap; word-break: break-all;
+      line-height: 1.8; color: #cbd5e1;
+    }
+    .output-body pre .t-brace { color: #818cf8; font-weight: 900; }
+    .output-body pre .t-wiki { color: #fb923c; font-weight: 700; }
+    .output-body pre .t-bold { color: white; font-weight: 900; }
+    .output-body pre .t-link { color: #60a5fa; font-weight: 900; }
+    .output-body pre .t-heading { color: #fbbf24; font-weight: 900; letter-spacing: 0.05em; }
+    .output-body pre .t-color { color: #fb7185; }
+    .output-body pre .t-file { color: #34d399; font-style: italic; }
+    .output-body pre .t-yt { color: #ef4444; font-weight: 700; }
+    .output-body pre .t-plain { color: #cbd5e1; }
+
+    .empty-state {
+      height: 100%; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: #1e293b; opacity: 0.2; transition: opacity 0.3s;
+    }
+    .empty-state:hover { opacity: 0.4; }
+    .empty-state-icon {
+      padding: 40px; border-radius: 50%;
+      background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.02);
+      margin-bottom: 24px;
+    }
+    .empty-state-icon svg { width: 60px; height: 60px; }
+    .empty-state span { font-size: 10px; font-weight: 700; letter-spacing: 0.8em; text-transform: uppercase; }
+
+    /* ── Footer ── */
+    footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 32px;
+      background: #050505; border-top: 1px solid var(--border);
+      font-size: 10px; font-weight: 600; color: #334155;
+      flex-shrink: 0; z-index: 10;
+    }
+    .footer-left { display: flex; align-items: center; gap: 0; height: 100%; }
+    .footer-item { display: flex; align-items: center; gap: 8px; padding: 0 24px 0 0; margin-right: 24px; border-right: 1px solid var(--border); height: 100%; }
+    .footer-item:last-child { border-right: none; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #059669; box-shadow: 0 0 8px rgba(5,150,105,0.5); }
+    .footer-right { display: flex; align-items: center; gap: 20px; opacity: 0.4; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 60;
+      background: rgba(0,0,0,0.9); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: 10px; box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+      width: 100%; max-width: 480px; max-height: 80vh;
+      display: flex; flex-direction: column; overflow: hidden;
+      ring: 1px solid rgba(255,255,255,0.05);
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; border-bottom: 1px solid var(--border2);
+      background: var(--bg4);
+    }
+    .modal-header span { font-size: 11px; font-weight: 700; color: white; }
+    .modal-close { background: transparent; border: none; cursor: pointer; color: var(--text); padding: 4px; border-radius: 4px; }
+    .modal-close:hover { background: var(--border2); }
+    .modal-close svg { width: 16px; height: 16px; }
+    .modal-body { padding: 32px; overflow-y: auto; font-size: 12px; line-height: 1.8; color: var(--text); }
+    .modal-body h3 { font-size: 10px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; text-decoration: underline; text-underline-offset: 4px; }
+    .modal-body .guide-block { padding-left: 12px; border-left: 2px solid var(--border2); margin-bottom: 24px; }
+    .modal-body .tag { color: #818cf8; }
+    .modal-body .tip { background: rgba(99,102,241,0.05); border: 1px solid rgba(99,102,241,0.1); border-radius: 6px; padding: 12px; color: #a5b4fc; margin-top: 8px; }
+    .modal-footer { padding: 12px 16px; background: #0d0d0d; border-top: 1px solid var(--border2); display: flex; justify-content: flex-end; }
+    .modal-footer button { padding: 8px 20px; background: var(--bg4); border: 1px solid var(--border2); color: white; font-size: 11px; font-weight: 700; font-family: inherit; border-radius: 6px; cursor: pointer; transition: background 0.15s; }
+    .modal-footer button:hover { background: var(--border2); }
+
+    /* ── Gradient Tool Panel ── */
+    .gradient-panel {
+      flex: 1; min-height: 0; overflow-y: auto;
+      background: #060b21;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 40px 24px; gap: 24px;
+    }
+
+    .g-upload-label {
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+      background: rgba(255,255,255,0.08); border: 1px dashed rgba(255,255,255,0.25);
+      border-radius: 10px; padding: 10px 20px; color: rgba(255,255,255,0.6);
+      font-size: 13px; font-family: inherit; transition: background 0.15s;
+    }
+    .g-upload-label:hover { background: rgba(255,255,255,0.13); color: white; }
+    .g-upload-label input { display: none; }
+    .g-upload-label svg { width: 16px; height: 16px; }
+
+    .g-frame {
+      width: 280px; height: 420px; position: relative; overflow: hidden;
+      border-radius: 28px; display: none; background: #060b21;
+      box-shadow: 0 4px 10px rgba(0,0,0,.75), 0 8px 30px rgba(0,0,0,.5);
+    }
+    .g-frame canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    .g-text-overlay {
+      position: absolute; inset: 0; z-index: 10;
+      display: flex; flex-direction: column;
+      justify-content: flex-end; padding: 28px 24px 32px;
+      pointer-events: none;
+    }
+    .g-title { color: white; font-size: 22px; font-weight: bold; line-height: 1.2; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    .g-sub { color: rgba(255,255,255,0.75); font-size: 14px; margin-top: 4px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    .g-lyrics { color: rgba(255,255,255,0.6); font-size: 13px; margin-top: 20px; line-height: 2; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    .g-active { color: white; font-size: 17px; font-weight: bold; }
+
+    .g-controls {
+      display: none; flex-direction: column; gap: 12px;
+      width: 280px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px; padding: 16px;
+    }
+    .g-slider-row { display: flex; align-items: center; gap: 12px; }
+    .g-slider-row label { font-size: 12px; color: rgba(255,255,255,0.7); width: 66px; flex-shrink: 0; font-family: inherit; }
+    .g-slider-row input[type=range] { flex: 1; }
+    .g-slider-row span { font-size: 12px; color: white; width: 32px; text-align: right; font-family: monospace; }
+    .g-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 2px 0; }
+    .g-mode-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .g-mode-label { font-size: 12px; color: rgba(255,255,255,0.7); width: 66px; flex-shrink: 0; font-family: inherit; }
+    .g-mode-btn {
+      font-size: 11px; padding: 4px 10px; border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.2); background: transparent;
+      color: rgba(255,255,255,0.5); cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .g-mode-btn.active { background: rgba(255,255,255,0.18); color: white; border-color: rgba(255,255,255,0.5); }
+
+    .g-sample-btn {
+      display: none; width: 280px;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 10px; padding: 10px 24px; color: white;
+      font-size: 13px; font-family: inherit; cursor: pointer; transition: background 0.15s;
+    }
+    .g-sample-btn:hover { background: rgba(255,255,255,0.2); }
+
+    .g-result { display: none; flex-direction: column; align-items: center; gap: 14px; width: 280px; }
+    .g-strip { width: 280px; height: 100px; border-radius: 12px; display: block; }
+    .g-code-block {
+      width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px; padding: 12px 14px; font-family: monospace; font-size: 11px;
+      color: white; word-break: break-all; line-height: 1.7;
+      cursor: pointer; position: relative; transition: background 0.15s;
+    }
+    .g-code-block:hover { background: rgba(255,255,255,0.1); }
+    .g-copied {
+      position: absolute; right: 10px; top: 10px; font-size: 11px;
+      background: rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 6px;
+      color: white; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+    }
+    .g-copied.show { opacity: 1; }
+    .g-hint { font-size: 11px; color: rgba(255,255,255,0.4); font-family: inherit; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0d0d0d; }
+    ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #252525; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-left">
+      <div class="nav-brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span>위키 가사 도우미</span>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="lyrics" onclick="switchTab('lyrics')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          가사형 (세로)
+        </button>
+        <button class="tab-btn" data-tab="lyrics2" onclick="switchTab('lyrics2')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          가사형 (플레이어)
+        </button>
+        <button class="tab-btn" data-tab="tracklist" onclick="switchTab('tracklist')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          트랙리스트
+        </button>
+        <button class="tab-btn" data-tab="gradient" onclick="switchTab('gradient')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          그라디언트 추출
+        </button>
+      </div>
+    </div>
+    <div class="nav-right">
+      <button class="nav-btn nav-btn-icon" onclick="toggleGuide()" title="가이드">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:#94a3b8"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </button>
+      <div style="width:1px;height:16px;background:var(--border);margin:0 4px;"></div>
+      <button class="nav-btn" onclick="loadSample()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.85-3.99"/></svg>
+        샘플 데이터
+      </button>
+    </div>
+  </nav>
+
+  <!-- LYRICS PANEL -->
+  <div class="panel active" id="panel-lyrics">
+    <div class="editor-surface">
+      <div class="col">
+        <div class="col-header">
+          <div class="col-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            입력 데이터
+          </div>
+        </div>
+        <div class="col-body">
+          <div class="line-nums" id="ln-lyrics"></div>
+          <textarea id="input-lyrics" placeholder="// 가사 데이터를 입력하거나 샘플을 불러오세요..." oninput="onInput('lyrics')"></textarea>
+        </div>
+      </div>
+      <div class="col-divider"></div>
+      <div class="col">
+        <div class="col-header">
+          <div class="col-label accent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="6" height="4" rx="1"/><rect x="2" y="10" width="6" height="4" rx="1"/><rect x="2" y="17" width="6" height="4" rx="1"/><path d="M10 5h12M10 12h12M10 19h12"/></svg>
+            결과 코드
+          </div>
+          <button class="copy-btn" id="copy-lyrics" onclick="copyOutput('lyrics')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            코드 복사
+          </button>
+        </div>
+        <div class="output-body" id="output-lyrics">
+          <div class="empty-state">
+            <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+            <span>대기 중</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LYRICS2 PANEL -->
+  <div class="panel" id="panel-lyrics2">
+    <div class="editor-surface">
+      <div class="col">
+        <div class="col-header">
+          <div class="col-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            입력 데이터
+          </div>
+        </div>
+        <div class="col-body">
+          <div class="line-nums" id="ln-lyrics2"></div>
+          <textarea id="input-lyrics2" placeholder="// 가사 데이터를 입력하거나 샘플을 불러오세요..." oninput="onInput('lyrics2')"></textarea>
+        </div>
+      </div>
+      <div class="col-divider"></div>
+      <div class="col">
+        <div class="col-header">
+          <div class="col-label accent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="6" height="4" rx="1"/><rect x="2" y="10" width="6" height="4" rx="1"/><rect x="2" y="17" width="6" height="4" rx="1"/><path d="M10 5h12M10 12h12M10 19h12"/></svg>
+            결과 코드
+          </div>
+          <button class="copy-btn" id="copy-lyrics2" onclick="copyOutput('lyrics2')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            코드 복사
+          </button>
+        </div>
+        <div class="output-body" id="output-lyrics2">
+          <div class="empty-state">
+            <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+            <span>대기 중</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRACKLIST PANEL -->
+  <div class="panel" id="panel-tracklist">
+    <div class="editor-surface">
+      <div class="col">
+        <div class="col-header">
+          <div class="col-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            입력 데이터
+          </div>
+        </div>
+        <div class="col-body">
+          <div class="line-nums" id="ln-tracklist"></div>
+          <textarea id="input-tracklist" placeholder="// 가사 데이터를 입력하거나 샘플을 불러오세요..." oninput="onInput('tracklist')"></textarea>
+        </div>
+      </div>
+      <div class="col-divider"></div>
+      <div class="col">
+        <div class="col-header">
+          <div class="col-label accent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="6" height="4" rx="1"/><rect x="2" y="10" width="6" height="4" rx="1"/><rect x="2" y="17" width="6" height="4" rx="1"/><path d="M10 5h12M10 12h12M10 19h12"/></svg>
+            결과 코드
+          </div>
+          <button class="copy-btn" id="copy-tracklist" onclick="copyOutput('tracklist')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            코드 복사
+          </button>
+        </div>
+        <div class="output-body" id="output-tracklist">
+          <div class="empty-state">
+            <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+            <span>대기 중</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRADIENT PANEL -->
+  <div class="panel" id="panel-gradient">
+    <div class="gradient-panel">
+      <label class="g-upload-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span id="g-label-text">앨범 커버 선택</span>
+        <input type="file" accept="image/*" id="g-file-input"/>
+      </label>
+
+      <div class="g-frame" id="g-frame">
+        <canvas id="g-canvas" width="280" height="420"></canvas>
+        <div class="g-text-overlay">
+          <div class="g-title">when you sleep</div>
+          <div class="g-sub">my bloody valentine</div>
+          <div class="g-lyrics">
+            <div>when i look at you</div>
+            <div class="g-active">oh, i don't know what's real</div>
+            <div>once in a while</div>
+            <div>and you make me laugh</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="g-controls" id="g-controls">
+        <div class="g-slider-row">
+          <label>blur</label>
+          <input type="range" id="g-blur" min="4" max="80" value="40" step="1" oninput="document.getElementById('g-blur-val').textContent=this.value"/>
+          <span id="g-blur-val">40</span>
+        </div>
+        <div class="g-slider-row">
+          <label>opacity</label>
+          <input type="range" id="g-opacity" min="10" max="100" value="70" step="1" oninput="document.getElementById('g-opacity-val').textContent=this.value"/>
+          <span id="g-opacity-val">70</span>
+        </div>
+        <div class="g-divider"></div>
+        <div class="g-mode-row">
+          <span class="g-mode-label">darken</span>
+          <button class="g-mode-btn active" data-mode="none" onclick="setDarkMode('none')">none</button>
+          <button class="g-mode-btn" data-mode="all" onclick="setDarkMode('all')">all</button>
+          <button class="g-mode-btn" data-mode="selective" onclick="setDarkMode('selective')">bright only</button>
+        </div>
+        <div class="g-slider-row" id="g-strength-row" style="display:none">
+          <label>strength</label>
+          <input type="range" id="g-strength" min="0" max="100" value="50" step="1" oninput="document.getElementById('g-strength-val').textContent=this.value"/>
+          <span id="g-strength-val">50</span>
+        </div>
+        <div class="g-slider-row" id="g-threshold-row" style="display:none">
+          <label>threshold</label>
+          <input type="range" id="g-threshold" min="0" max="255" value="140" step="1" oninput="document.getElementById('g-threshold-val').textContent=this.value"/>
+          <span id="g-threshold-val">140</span>
+        </div>
+        <div class="g-divider"></div>
+        <div class="g-slider-row">
+          <label>stops</label>
+          <input type="range" id="g-stops" min="2" max="16" value="10" step="1" oninput="document.getElementById('g-stops-val').textContent=this.value"/>
+          <span id="g-stops-val">10</span>
+        </div>
+      </div>
+
+      <button class="g-sample-btn" id="g-sample-btn" onclick="sampleGradient()">이 프레임 샘플링</button>
+
+      <div class="g-result" id="g-result">
+        <canvas class="g-strip" id="g-strip" width="280" height="100"></canvas>
+        <div class="g-code-block" onclick="copyGradient()">
+          <span id="g-code-text"></span>
+          <span class="g-copied" id="g-copied">복사됨</span>
+        </div>
+        <div class="g-hint">클릭하여 복사</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-left">
+      <div class="footer-item"><div class="status-dot"></div><span>시스템 준비됨</span></div>
+      <div class="footer-item"><span style="color:rgba(99,102,241,0.6)">오프라인 모드</span></div>
+      <div class="footer-item" style="border:none"><span style="color:#1e293b">NamuWiki-2.5</span></div>
+    </div>
+    <div class="footer-right">
+      <span id="footer-tab-label">가사형 1</span>
+      <div style="width:1px;height:12px;background:var(--border)"></div>
+      <span>v3.5.0</span>
+    </div>
+  </footer>
+
+</div>
+
+<!-- GUIDE MODAL -->
+<div class="modal-overlay" id="guide-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span>문법 및 사용 가이드</span>
+      <button class="modal-close" onclick="toggleGuide()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <h3>🎵 기본 구조</h3>
+      <div class="guide-block">
+        가사 도우미는 <strong style="color:white">영어 한 줄 + 한국어 한 줄</strong>을 한 쌍으로 처리합니다.<br/><br/>
+        <span class="tag">Isn't she lovely</span><br/>
+        <span class="tag">정말 사랑스럽지 않나요</span><br/><br/>
+        이 두 줄이 자동으로 짝지어져 포맷됩니다.
+      </div>
+
+      <h3>📋 메타데이터 순서 (가사형 세로)</h3>
+      <div class="guide-block">
+        <span class="tag">bg: linear-gradient(...)</span> — 배경 그라디언트 (그라디언트 추출 탭에서 생성 가능)<br/>
+        <span class="tag">cv: 파일명.jpg</span> — 나무위키에 업로드한 앨범 커버 파일명<br/>
+        <span class="tag">곡명</span><br/>
+        <span class="tag">아티스트명</span><br/>
+        <span style="color:#475569">(빈 줄)</span><br/>
+        가사 시작...
+      </div>
+
+      <h3>📋 메타데이터 순서 (가사형 플레이어)</h3>
+      <div class="guide-block">
+        <span class="tag">bg: linear-gradient(...)</span><br/>
+        <span class="tag">vd: ABC123xyz</span> — YouTube URL의 v= 뒷부분<br/>
+        <span class="tag">곡명</span><br/>
+        <span class="tag">아티스트명</span><br/>
+        <span class="tag">4:32</span> — 재생시간<br/>
+        가사 시작...
+      </div>
+
+      <h3>🏷️ 섹션 헤더</h3>
+      <div class="guide-block">
+        대괄호로 감싸면 섹션 제목이 됩니다.<br/><br/>
+        <span class="tag">[Intro]</span> &nbsp; <span class="tag">[Verse 1]</span> &nbsp; <span class="tag">[Chorus]</span> &nbsp; <span class="tag">[Bridge]</span> &nbsp; <span class="tag">[Outro]</span><br/><br/>
+        이름은 자유롭게 쓸 수 있습니다.
+      </div>
+
+      <h3>↔️ [Right] — 다른 보컬리스트 파트</h3>
+      <div class="guide-block">
+        <strong style="color:white">언제 쓰나요?</strong> 듀엣, 피처링, 콜앤리스폰스처럼 다른 사람이 부르는 파트.<br/>
+        예: Ebony and Ivory에서 Paul McCartney가 받아치는 파트.<br/><br/>
+        <span class="tag">[Right]</span><br/>
+        Side by side on my piano keyboard<br/>
+        내 피아노 건반 위에 나란히<br/>
+        <span class="tag">[Right End]</span>
+      </div>
+
+      <h3>🎤 [Spoken] — 대사 / 나레이션</h3>
+      <div class="guide-block">
+        <strong style="color:white">언제 쓰나요?</strong> 노래가 아닌 말로 하는 부분 — 인트로 나레이션, 중간 대사, 아웃트로 멘트 등.<br/>
+        예: Black Man 아웃트로에서 아이들이 퀴즈를 주고받는 부분.<br/><br/>
+        <span class="tag">[Spoken]</span><br/>
+        Who was the first man to die for the flag we now hold high?<br/>
+        우리가 지금 높이 드는 이 깃발을 위해 처음으로 죽은 사람은 누구인가요?<br/>
+        <span class="tag">[Spoken End]</span>
+      </div>
+
+      <h3>🚫 [Ignore] — 번역 없는 추임새</h3>
+      <div class="guide-block">
+        <strong style="color:white">언제 쓰나요?</strong> "Oh", "Oooh", "Yeah" 같은 감탄사처럼 한국어 번역이 없거나 불필요한 가사.<br/>
+        [Ignore]를 붙이면 한국어 줄을 소비하지 않고 해당 줄만 단독 처리됩니다.<br/><br/>
+        <span class="tag">(La la la la la la) [Ignore]</span><br/>
+        <span class="tag">다음 영어 가사 줄</span> ← 이 줄이 한국어와 정상적으로 짝지어짐
+      </div>
+
+      <h3>( ) — 백킹 보컬</h3>
+      <div class="guide-block">
+        <strong style="color:white">언제 쓰나요?</strong> 메인 보컬 뒤에서 작게 받쳐주는 코러스, 배경 보컬.<br/>
+        괄호로 감싸면 작은 글씨 스타일로 표시됩니다.<br/><br/>
+        <span class="tag">(Higher ground)</span><br/>
+        <span class="tag">(더 높은 곳으로)</span>
+      </div>
+
+      <h3>🔁 [Repeat] — 백킹 보컬 반복</h3>
+      <div class="guide-block">
+        <strong style="color:white">언제 쓰나요?</strong> 메인 보컬이 가사를 부른 직후, 백킹 보컬이 같은 가사를 한 번 더 받아서 부를 때.<br/><br/>
+        You are the sunshine of my life<br/>
+        당신은 내 삶의 햇살<br/>
+        <span class="tag">[Repeat]</span> ← 바로 위 가사가 작은 백킹 보컬 스타일로 한 번 더 표시됩니다.
+      </div>
+
+      <h3>🎸 [Inst] — 간주</h3>
+      <div class="guide-block">
+        가사 없이 연주만 있는 구간. <span class="tag">● ● ●</span> 으로 자동 표시됩니다.
+      </div>
+
+      <h3>🔗 트랙리스트 링크</h3>
+      <div class="guide-block">
+        <span class="tag">트랙명 3:45</span> — 링크 없음<br/>
+        <span class="tag">|트랙명 3:45</span> — 같은 이름의 나무위키 문서로 링크<br/>
+        <span class="tag">문서명|표시할 이름 3:45</span> — 다른 문서로 링크 (문서명과 표시 이름이 다를 때)
+      </div>
+
+
+
+    </div>
+    <div class="modal-footer">
+      <button onclick="toggleGuide()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let activeTab = 'lyrics';
+const outputs = { lyrics: '', lyrics2: '', tracklist: '' };
+
+const footerLabels = {
+  lyrics: '가사형 1', lyrics2: '가사형 2', tracklist: '트랙리스트', gradient: '그라디언트 추출'
+};
+
+// ═══════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+  document.getElementById('footer-tab-label').textContent = footerLabels[tab] || tab;
+}
+
+function toggleGuide() {
+  const m = document.getElementById('guide-modal');
+  m.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════
+// LINE NUMBERS
+// ═══════════════════════════════════════
+function updateLineNums(tab) {
+  const ta = document.getElementById('input-' + tab);
+  const ln = document.getElementById('ln-' + tab);
+  if (!ta || !ln) return;
+  const lineCount = ta.value.split('\n').length;
+  const totalLines = Math.max(lineCount, 60);
+  ln.innerHTML = Array.from({length: totalLines}, (_, i) => {
+    const active = i < lineCount;
+    return `<span class="${active ? 'active-line' : ''}">${String(i+1).padStart(2,'0')}</span>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// INPUT HANDLER
+// ═══════════════════════════════════════
+function onInput(tab) {
+  updateLineNums(tab);
+  let result = '';
+  const val = document.getElementById('input-' + tab).value;
+  if (tab === 'lyrics') result = formatLyrics(val);
+  else if (tab === 'lyrics2') result = formatLyrics2(val);
+  else result = formatTracklist(val);
+  outputs[tab] = result;
+  renderOutput(tab, result);
+}
+
+function renderOutput(tab, code) {
+  const el = document.getElementById('output-' + tab);
+  if (!code) {
+    const icons = {
+      lyrics: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+      lyrics2: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>',
+      tracklist: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>'
+    };
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${icons[tab]||''}</svg></div><span>대기 중</span></div>`;
+    return;
+  }
+  const html = highlightWiki(code);
+  el.innerHTML = `<pre>${html}</pre>`;
+}
+
+function highlightWiki(code) {
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const tokens = code.split(/(\{\{\{|\}\}\}|\[\[|\]\]|'''|#!wiki\s+style="[^"]*"|==+[^=]+==+|\{\{\{#\w+|\[youtube\([^)]+\)\]|\[파일:[^\|\]]+)/g);
+  return tokens.map(t => {
+    if (!t) return '';
+    if (t === '{{{' || t === '}}}') return `<span class="t-brace">${esc(t)}</span>`;
+    if (t.startsWith('#!wiki')) return `<span class="t-wiki">${esc(t)}</span>`;
+    if (t === "'''") return `<span class="t-bold">${esc(t)}</span>`;
+    if (t === '[[' || t === ']]') return `<span class="t-link">${esc(t)}</span>`;
+    if (t.startsWith('==')) return `<span class="t-heading">${esc(t)}</span>`;
+    if (t.startsWith('{{{#')) return `<span class="t-color">${esc(t)}</span>`;
+    if (t.startsWith('[파일:')) return `<span class="t-file">${esc(t)}</span>`;
+    if (t.startsWith('[youtube(')) return `<span class="t-yt">${esc(t)}</span>`;
+    return `<span class="t-plain">${esc(t)}</span>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// COPY
+// ═══════════════════════════════════════
+function copyOutput(tab) {
+  if (!outputs[tab]) return;
+  navigator.clipboard.writeText(outputs[tab]).then(() => {
+    const btn = document.getElementById('copy-' + tab);
+    btn.classList.add('copied');
+    btn.querySelector('span').textContent = '복사됨';
+    setTimeout(() => { btn.classList.remove('copied'); btn.querySelector('span').textContent = '코드 복사'; }, 2000);
+  });
+}
+
+// ═══════════════════════════════════════
+// SAMPLES
+// ═══════════════════════════════════════
+const SAMPLES = {
+  lyrics: `bg: linear-gradient(184deg,rgba(101, 91, 75, 1) 22%, rgba(106, 104, 100, 1) 36%, rgba(124, 108, 112, 1) 62%, rgba(123, 111, 66, 1) 92%)
+cv: sample_cover.jpg
+곡 제목
+아티스트 이름
+
+[Intro]
+노래의 시작 부분입니다.
+
+[Right]
+[Chorus]
+이 부분은 우측 정렬된 후렴구입니다.
+[Repeat]
+[Right End]
+
+Written By: [[아티스트|{{{#FFF 제작자}}}]]`,
+
+  lyrics2: `bg: linear-gradient(193deg, rgba(133,133,133,1) 0%, rgba(121,121,121,1) 23%, rgba(92,92,92,1) 49%, rgba(90,90,90,1) 100%)
+vd: MLI_AK1LwL4
+곡 제목 (플레이어형)
+아티스트 이름
+3:30
+영문 가사 줄
+한글 번역 줄
+(Backing Vocal)
+(백킹 코러스 번역)
+[Repeat]
+
+[Inst]
+
+[Right]
+우측 정렬된 가사
+번역 가사
+[Right end]
+
+Written By: 제작자`,
+
+  tracklist: `Background: linear-gradient(193deg, rgba(133,133,133,1) 0%, rgba(121,121,121,1) 31%, rgba(92,92,92,1) 69%, rgba(90,90,90,1) 100%)
+Cover File: album_cover.jpg
+앨범 제목
+아티스트 이름
+장르
+발매연도
+총 재생시간
+
+Tracklist
+[Volume 1]
+첫 번째 트랙 3:45
+|두 번째 트랙 (링크 포함) 4:20
+링크|세 번째 트랙 (제목 다름) 2:30
+
+[Volume 2]
+네 번째 트랙 0:50`
+};
+
+function loadSample() {
+  if (activeTab === 'gradient') return;
+  const ta = document.getElementById('input-' + activeTab);
+  ta.value = SAMPLES[activeTab] || '';
+  onInput(activeTab);
+}
+
+// ═══════════════════════════════════════
+// FORMAT: LYRICS 1
+// ═══════════════════════════════════════
+function formatLyrics(rawText) {
+  if (!rawText) return '';
+  const rawLines = rawText.split('\n').map(l => l.trim());
+  let bgValue='', cvValue='', titleValue='', artistValue='';
+  let lyricsStartIndex=-1, metadataFound=false, metaLinesCount=0;
+
+  for (let i=0;i<rawLines.length;i++) {
+    const line=rawLines[i];
+    if (!line) { if (metaLinesCount>=1) { lyricsStartIndex=i; break; } continue; }
+    const lower=line.toLowerCase();
+    if (lower.startsWith('bg:')) { bgValue=line.substring(3).trim(); metadataFound=true; continue; }
+    if (lower.startsWith('cv:')) { cvValue=line.substring(3).trim(); metadataFound=true; continue; }
+    if (metaLinesCount===0) { titleValue=line; metaLinesCount++; }
+    else if (metaLinesCount===1) { artistValue=line; metaLinesCount++; }
+    else { lyricsStartIndex=i; break; }
+  }
+
+  const bodyLines = lyricsStartIndex===-1 ? (metadataFound?[]:rawLines) : rawLines.slice(lyricsStartIndex);
+  const SECTION_HEADER_STYLE=`{{{#!wiki style="display: inline-block; border-radius: 50px; background: rgba(0, 0, 0, 0.08); font-size: 13px; text-align: center; padding: 2px 9px; border: 1.9px solid rgba(255, 255, 255, 0.4); margin: 8px 0 10px -4px"\n$CONTENT$}}}`;
+  const RIGHT_ALIGN_WRAPPER=`{{{#!wiki style="text-align: right; margin-top: 5px; margin-bottom: -15px"\n$CONTENT$\n}}}`;
+  const INSTR_TEMPLATE=`{{{#!wiki style="text-align: center; margin: 15px 0; color: #888"\n● ● ●\n}}}`;
+  const BACKING_TEMPLATE=`{{{#!wiki style="margin-top: .4em; margin-bottom: -1em; font-size: 15px; color: rgba(255, 255, 255, 0.55)"\n'''$ENG$'''\n{{{-2 $KOR$}}}}}}`;
+  const SPOKEN_TEMPLATE=`{{{#!wiki style="margin-top: .4em; margin-bottom: -1em; font-size: 15px; color: rgba(255, 255, 255, 0.7)"\n'''$ENG$'''\n{{{-2 $KOR$}}}}}}`;
+  const MAIN_LINE_TEMPLATE=`'''{{{+1 $ENG$}}}'''  \n$KOR$`;
+
+  const formatHeaderContent = text => {
+    const h=text.replace(/^\[|\]$/g,'');
+    if (h.includes('/')) { const p=h.split('/'); return `${p[0].trim()} '''${p.slice(1).join('/').trim()}'''`; }
+    if (h.includes(':')) { const p=h.split(':'); return `${p[0]}: '''${p.slice(1).join(':').trim()}'''`; }
+    return `'''${h}'''`;
+  };
+
+  const getParen = t => {
+    const full=t.match(/^\((.+)\)$/);
+    if (full) return {main:'',paren:full[1].trim(),isFullLine:true};
+    const end=t.match(/(.+)\s+\((.+)\)$/);
+    if (end) return {main:end[1].trim(),paren:end[2].trim(),isFullLine:false};
+    return {main:t,paren:null,isFullLine:false};
+  };
+
+  let isRight=false, isSpoken=false;
+  const sections=[]; let currentLines=[];
+  const flushSection=(forced=null)=>{ if(currentLines.length>0){sections.push({lines:[...currentLines],isRight:forced!==null?forced:isRight});currentLines=[];} };
+
+  for (let i=0;i<bodyLines.length;i++) {
+    let line=bodyLines[i]; const lower=line.toLowerCase();
+    if (lower==='[right]'){flushSection();isRight=true;continue;}
+    if (lower==='[right end]'){flushSection(true);isRight=false;continue;}
+    if (lower==='[spoken]'){isSpoken=true;continue;}
+    if (lower==='[spoken end]'){isSpoken=false;continue;}
+    if (lower==='[instr]'){currentLines.push({text:'● ● ●',isSpoken:false,isInstr:true});continue;}
+    if (lower==='[inst]'){currentLines.push({text:'● ● ●',isSpoken:false,isPlainInst:true});continue;}
+    if (lower==='[repeat]'){currentLines.push({text:'',isSpoken:false,isRepeatBlock:true});continue;}
+    if (lower.startsWith('written by:')){currentLines.push({text:line,isSpoken:false,isCredit:true});continue;}
+    if (!line){
+      if(currentLines.length>0||sections.length>0){
+        if(isRight){currentLines.push({text:'',isSpoken:false});}
+        else{flushSection(false);if(bodyLines[i-1]==='')sections.push({lines:[{text:'',isSpoken:false}],isRight:false});}
+      } continue;
+    }
+    let ignoreTranslation=false;
+    if(lower.includes('[ignore]')){ignoreTranslation=true;line=line.replace(/\[ignore\]/gi,'').trim();}
+    currentLines.push({text:line,isSpoken,ignoreTranslation});
+  }
+  flushSection();
+
+  let lastEng='',lastKor='';
+  const formattedBlocks=sections.map(section=>{
+    const lines=section.lines; const acc=[]; let idx=0;
+    while(idx<lines.length){
+      const lo=lines[idx];
+      if(lo.text.startsWith('[')&&lo.text.endsWith(']')){acc.push(SECTION_HEADER_STYLE.replace('$CONTENT$',formatHeaderContent(lo.text)));idx++;continue;}
+      if(lo.text===''&&!lo.isRepeatBlock){acc.push('');idx++;continue;}
+      if(lo.isInstr){acc.push(INSTR_TEMPLATE);idx++;continue;}
+      if(lo.isPlainInst){acc.push(lo.text);idx++;continue;}
+      if(lo.isRepeatBlock){if(lastEng)acc.push(BACKING_TEMPLATE.replace('$ENG$',lastEng).replace('$KOR$',lastKor||'...'));idx++;continue;}
+      if(lo.isCredit){const p=lo.text.split(':');acc.push(p.length>1?`'''${p[0]}:''' ${p.slice(1).join(':').trim()}`:`'''${lo.text}'''`);idx++;continue;}
+      const engP=getParen(lo.text);
+      const korObj=idx+1<lines.length?lines[idx+1]:null;
+      let korText=''; let linesConsumed=1;
+      const nextIsSpecial=korObj&&(korObj.text.startsWith('[')||korObj.isInstr||korObj.isPlainInst||korObj.isCredit||korObj.isRepeatBlock||korObj.text==='');
+      const isBacking=lo.isSpoken||engP.isFullLine;
+      if(lo.ignoreTranslation){
+        if(isBacking){const tmpl=lo.isSpoken?SPOKEN_TEMPLATE:BACKING_TEMPLATE;acc.push(tmpl.replace('$ENG$',lo.isSpoken?lo.text:(engP.paren||lo.text)).replace('\n{{{-2 $KOR$}}}',''));}
+        else{acc.push(MAIN_LINE_TEMPLATE.replace('$ENG$',lo.text).replace('  \n$KOR$',''));lastEng=lo.text;lastKor='...';}
+        idx+=1;continue;
+      }
+      if(isBacking){
+        if(korObj&&!nextIsSpecial){const korP=getParen(korObj.text);if(lo.isSpoken){korText=korObj.text;linesConsumed=2;}else{korText=korP.isFullLine?(korP.paren||'...'):korObj.text;linesConsumed=2;}}
+        else{korText='...';linesConsumed=1;}
+        const tmpl=lo.isSpoken?SPOKEN_TEMPLATE:BACKING_TEMPLATE;
+        acc.push(tmpl.replace('$ENG$',lo.isSpoken?lo.text:(engP.paren||lo.text)).replace('$KOR$',korText));
+        idx+=linesConsumed;
+      } else {
+        if(korObj&&!nextIsSpecial){
+          const korP=getParen(korObj.text);
+          acc.push(MAIN_LINE_TEMPLATE.replace('$ENG$',engP.main).replace('$KOR$',korP.main||korObj.text));
+          lastEng=engP.main;lastKor=korP.main||korObj.text;
+          if(engP.paren)acc.push(BACKING_TEMPLATE.replace('$ENG$',engP.paren).replace('$KOR$',korP.paren||'...'));
+          idx+=2;
+        } else {
+          acc.push(MAIN_LINE_TEMPLATE.replace('$ENG$',lo.text).replace('  \n$KOR$',''));
+          lastEng=lo.text;lastKor='...';idx+=1;
+        }
+      }
+    }
+    let block=acc.join('\n');
+    if(section.isRight)block=RIGHT_ALIGN_WRAPPER.replace('$CONTENT$',block);
+    return block;
+  });
+
+  const finalLyrics=formattedBlocks.join('\n\n');
+  if(metadataFound){
+    return `== 가사 ==\n{{{#!wiki style="margin: 0 auto; width: 100%; max-width: 600px; border-radius: 10px; padding: 30px 17px 25px 17px; background-image: ${bgValue}; color: #FFF" {{{\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="word-break: normal"\n{{{#!wiki style="margin: -5px -10px 15px 0px"\n[[파일:${cvValue}|height=70&border-radius=4px]]{{{#!wiki style="display: inline-block; margin-left: 15px; font-size: 16px; text-align: left; vertical-align: middle;"\n'''${titleValue}'''\n{{{#!wiki style="font-size: 14px; color: rgba(256,256,256,0.6)"\n${artistValue}}}}}}}}}}}${finalLyrics?'\n'+finalLyrics:''}\n}}}}}}}}}`;
+  }
+  return finalLyrics;
+}
+
+// ═══════════════════════════════════════
+// FORMAT: LYRICS 2
+// ═══════════════════════════════════════
+function formatLyrics2(rawText) {
+  if (!rawText) return '';
+  const lines=rawText.split('\n').map(l=>l.trim());
+  let background='',youtubeId='',title='',artist='',duration='',creditsFromMetadata='';
+  const lyricsLines=[]; let metadataIdx=0;
+
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i]; if(!line){if(lyricsLines.length>0)lyricsLines.push('');continue;}
+    const lower=line.toLowerCase();
+    if(lower.startsWith('bg:')||lower.startsWith('background:')){background=line.split(':').slice(1).join(':').trim();continue;}
+    if(lower.startsWith('vd:')){youtubeId=line.split(':').slice(1).join(':').trim();continue;}
+    if(lower.startsWith('wb:')){creditsFromMetadata=line.split(':').slice(1).join(':').trim();continue;}
+    if(metadataIdx===0){title=line;metadataIdx++;}
+    else if(metadataIdx===1){artist=line;metadataIdx++;}
+    else if(metadataIdx===2){duration=line;metadataIdx++;}
+    else{lyricsLines.push(line);}
+  }
+
+  const outputHeader=`=== ${title} ===\n{{{#!wiki style="width: 360px; background-image: ${background}; border-radius: 15px; padding: 1em 1em 1em 1em"\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="word-break: normal"\n{{{#FFF\n[youtube(${youtubeId}, height=340, width=340)]\n{{{#!wiki style="margin: 3px 0 -21px 0"\n'''${title}'''\n{{{#!wiki style="font-size: 15px; color: rgba(256,256,256,0.6); margin: 0 0 -20px 0"\n${artist}}}}\n{{{#!wiki style="margin: 2px 0 0 0"\n{{{#!wiki style="width: 330px; height: .3em; padding: 2px 4px; margin: 13px 0 -20px 0; border-radius: 3px; background: rgba(255, 255, 255, 0.28)"\n}}}\n{{{#!wiki style="float: left; margin-left: .16em; margin-top: 0.3em; font-size: .6em; color: rgba(255, 255, 255, 0.28)"\n0:00}}}}}}}\n}}}\n{{{#!wiki style="float: right; margin-right: .15em; margin-top: 0.2em; font-size: .6em; color: rgba(255, 255, 255, 0.28)"\n${duration}}}}}}}}\n{{{#!wiki style="text-align: center; font-size: 0.9em; color: rgba(256,256,256,0.9)"\n{{{#!folding 가사 펼치기 · 접기\n{{{#!wiki style="text-align: left; margin-top: 1em; font-size: 16px; color: #FFFFFF"`;
+
+  let processedLyrics=''; let isRight=false,isSpoken=false,lastEng='',lastKor='';
+
+  for(let i=0;i<lyricsLines.length;i++){
+    const line=lyricsLines[i]; if(!line){processedLyrics+='\n';continue;}
+    const lower=line.toLowerCase();
+    if(lower==='[right]'){isRight=true;continue;}
+    if(lower==='[right end]'||lower==='[rightend]'){isRight=false;continue;}
+    if(lower==='[spoken]'){isSpoken=true;continue;}
+    if(lower==='[spoken end]'){isSpoken=false;continue;}
+    if(lower.startsWith('written by:')){const name=line.split(':').slice(1).join(':').trim();processedLyrics+=`{{{#!wiki style="text-align: left; margin-top: -0.2em; font-size: 12px; color: #FFFFFF"\n'''Written By:''' ${name}}}}\n`;continue;}
+    if(lower==='[inst]'||lower==='[instr]'){processedLyrics+=`{{{-2 ● ● ●}}}\n`;continue;}
+    if(lower==='[repeat]'){processedLyrics+=`{{{#!wiki style="margin-top: .2em; margin-bottom: -1.5em; font-size: 14px; color: rgba(255, 255, 255, 0.5)"\n'''${lastEng}'''\n{{{-2 ${lastKor}}}}}}}}\n`;continue;}
+    let currentLine=line; let ignoreTranslation=false;
+    if(lower.includes('[ignore]')){ignoreTranslation=true;currentLine=currentLine.replace(/\[ignore\]/gi,'').trim();}
+    const isBacking=currentLine.startsWith('(')&&currentLine.endsWith(')');
+    const engText=isBacking?currentLine.slice(1,-1):currentLine;
+    let korProcessed='...';
+    if(!ignoreTranslation){const korText=(i+1<lyricsLines.length)?lyricsLines[i+1]:'...';korProcessed=(korText.startsWith('(')&&korText.endsWith(')'))?korText.slice(1,-1):korText;}
+    const translationLine=ignoreTranslation?'':`\n{{{-2 ${korProcessed}}}}`;
+    if(isRight){processedLyrics+=`{{{#!wiki style="margin-top: -.4em; margin-bottom: -1em; font-size: 16px; text-align: right"\n'''${engText}'''${translationLine}}}}\n`;if(!ignoreTranslation)i++;}
+    else if(isSpoken){processedLyrics+=`{{{#!wiki style="margin-top: .2em; margin-bottom: -1.5em; font-size: 14px; color: rgba(255, 255, 255, 0.7)"\n'''${engText}'''${translationLine}}}}\n`;if(!ignoreTranslation)i++;}
+    else if(isBacking){processedLyrics+=`{{{#!wiki style="margin-top: .2em; margin-bottom: -1.5em; font-size: 14px; color: rgba(255, 255, 255, 0.5)"\n'''${engText}'''${translationLine}}}}\n`;if(!ignoreTranslation)i++;}
+    else{processedLyrics+=`'''${engText}'''${translationLine}\n`;lastEng=engText;lastKor=ignoreTranslation?lastKor:korProcessed;if(!ignoreTranslation)i++;}
+  }
+
+  const creditBlock=creditsFromMetadata?`\n\n{{{#!wiki style="text-align: left; margin-top: -0.2em; font-size: 12px; color: #FFFFFF"\n'''Written By:''' ${creditsFromMetadata}}}}`:''
+  return outputHeader+'\n'+processedLyrics+creditBlock+`}}}}}}}}}}}}}}}}}}`;
+}
+
+// ═══════════════════════════════════════
+// FORMAT: TRACKLIST
+// ═══════════════════════════════════════
+function formatTracklist(rawText) {
+  if (!rawText) return '';
+  const lines=rawText.split('\n').map(l=>l.trim());
+  let background='linear-gradient(135deg, #2c3e50, #000)',cover='cover_placeholder.jpg';
+  let album='Album Title',artist='Artist Name',genre='Genre',year='Year',duration='Duration';
+  let metadataCount=0; const tracklistBody=[]; let inBody=false;
+
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i]; if(!line)continue;
+    const lower=line.toLowerCase();
+    if(lower.startsWith('bg:')||lower.startsWith('background:')){background=line.split(':').slice(1).join(':').trim();continue;}
+    if(lower.startsWith('cv:')||lower.startsWith('cover file:')){cover=line.split(':').slice(1).join(':').trim();continue;}
+    if(!inBody){
+      if(lower==='tracklist'||line.startsWith('[')){inBody=true;if(line.startsWith('['))tracklistBody.push(line);continue;}
+      if(metadataCount===0)album=line;
+      else if(metadataCount===1)artist=line;
+      else if(metadataCount===2)genre=line;
+      else if(metadataCount===3)year=line;
+      else if(metadataCount===4)duration=line;
+      metadataCount++;
+    } else { tracklistBody.push(line); }
+  }
+
+  const headerBlock=`{{{#!wiki style="margin: 0 auto; padding: 5px 0 5px; max-width: 600px; border-radius:14px; font-size:0.9em; color:#fff; background: ${background}; text-align: center"\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="margin: 10px -10px 30px auto"\n[[파일:${cover}|width=90&border-radius=4]]{{{#!wiki style="display: inline-block; margin-left: 20px; font-size: 16px; text-align: left; vertical-align: middle;"\n'''[[${album}|{{{#FFF ${album}}}}]]'''\n{{{#!wiki style="font-size: 15px; color: rgba(256,256,256,0.8); margin: 0 0 -20px 0"\n${artist}}}}\n{{{#!wiki style="margin-top: .3em; font-size: 11px; font-weight: bold; color: rgba(256,256,256,0.6)"\n${genre} · ${year} · ${duration}}}}}}}}}}\n{{{#!wiki style="margin-top: -32px; margin-bottom: 10px; margin-left: 1px; margin-right: 1px; color: rgba(256,256,256,0.9)"\n{{{#!folding 트랙리스트 펼치기 · 접기\n{{{#FFF,#1c1d1f\n{{{#!wiki style="width: 100%; background: currentcolor; padding: .8em 0 1em 3.5em; margin-top: 20px; margin-bottom: 0px; text-align: left; font-size: 14px"`;
+
+  const formatTitleWithLink = rawTitle => {
+    const colorWrap=t=>`{{{#000,#FFF ${t}}}}`;
+    if(rawTitle.includes('|')){const parts=rawTitle.split('|');if(parts[0]===''){const t=parts.slice(1).join('|');return `[[${t}|${colorWrap(t)}]]`;}else{const link=parts[0];const t=parts.slice(1).join('|');return `[[${link}|${colorWrap(t)}]]`;}}
+    return colorWrap(rawTitle);
+  };
+
+  let tracksHtml='\n'; let trackNum=0,totalTracksAdded=0;
+
+  for(let i=0;i<tracklistBody.length;i++){
+    const line=tracklistBody[i];
+    if(line.startsWith('[')&&line.endsWith(']')){
+      const vol=line.replace(/[\[\]]/g,'');
+      const marginTop=totalTracksAdded>0?'1.3em':'-.3em';
+      tracksHtml+=`\n{{{#!wiki style="margin: ${marginTop} -3.5em -1em -3.5em; padding: .5em 1em; font-size: 13px; font-weight: bold"\n{{{#9f9f9f,#757575 ${vol}}}}}}\n`;
+      trackNum=0;
+    } else {
+      const timeMatch=line.match(/\s+(\d+:\d+)$/);
+      if(timeMatch){
+        trackNum++;totalTracksAdded++;
+        const time=timeMatch[1];const rawTitle=line.replace(timeMatch[0],'').trim();
+        const formattedTitle=formatTitleWithLink(rawTitle);const margin=trackNum>=10?'-1.8em':'-1.5em';
+        let nextIsTrack=false;
+        for(let j=i+1;j<tracklistBody.length;j++){const nl=tracklistBody[j];if(nl.startsWith('[')&&nl.endsWith(']'))break;if(nl.match(/\s+(\d+:\d+)$/)){nextIsTrack=true;break;}}
+        const border=nextIsTrack?`{{{#c7c7c9,#39393a {{{#!wiki style="height: 0; border-top: .0625rem currentcolor solid; margin: .8em 0 .7em 0"\n}}}}}}`:''
+        tracksHtml+=`${formattedTitle}{{{#!wiki style="float: left; margin-left: ${margin}"\n{{{#9f9f9f,#757575 ${trackNum}}}}}}{{{#!wiki style="float: right; margin-right: 1.5em"\n{{{#8b8b8b,#7f7f7f ${time}}}}\n}}}${border}`;
+      }
+    }
+  }
+  return headerBlock+tracksHtml+`\n}}}}}}\n}}}}}}}}}}}}`;
+}
+
+// ═══════════════════════════════════════
+// GRADIENT TOOL
+// ═══════════════════════════════════════
+const G_DURATION=35000, G_START=performance.now();
+let gImg=null, gAnimFrame=null, gDarkMode='none';
+
+function getAngles(){
+  const e=performance.now()-G_START;
+  const a1=((e%G_DURATION)/G_DURATION)*Math.PI*2;
+  const offset=(10000%G_DURATION)/G_DURATION*Math.PI*2;
+  const a2=-(((e%G_DURATION)/G_DURATION)*Math.PI*2)-offset;
+  return [a1,a2];
+}
+
+function boxBlur(imageData, radius) {
+  const d=imageData.data, w=imageData.width, h=imageData.height;
+  const tmp=new Uint8ClampedArray(d);
+  const r=Math.max(1,Math.floor(radius));
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      let rr=0,gg=0,bb=0,aa=0,cnt=0;
+      for(let kx=-r;kx<=r;kx++){const nx=Math.min(Math.max(x+kx,0),w-1);const i=(y*w+nx)*4;rr+=d[i];gg+=d[i+1];bb+=d[i+2];aa+=d[i+3];cnt++;}
+      const i=(y*w+x)*4;tmp[i]=rr/cnt;tmp[i+1]=gg/cnt;tmp[i+2]=bb/cnt;tmp[i+3]=aa/cnt;
+    }
+  }
+  const out=new Uint8ClampedArray(tmp);
+  for(let x=0;x<w;x++){
+    for(let y=0;y<h;y++){
+      let rr=0,gg=0,bb=0,aa=0,cnt=0;
+      for(let ky=-r;ky<=r;ky++){const ny=Math.min(Math.max(y+ky,0),h-1);const i=(ny*w+x)*4;rr+=tmp[i];gg+=tmp[i+1];bb+=tmp[i+2];aa+=tmp[i+3];cnt++;}
+      const i=(y*w+x)*4;out[i]=rr/cnt;out[i+1]=gg/cnt;out[i+2]=bb/cnt;out[i+3]=aa/cnt;
+    }
+  }
+  imageData.data.set(out);
+  return imageData;
+}
+
+function blurredCanvas(srcImg, blur, angle, tx, ty) {
+  const oc=document.createElement('canvas');
+  oc.width=280;oc.height=420;
+  const ctx=oc.getContext('2d');
+  const size=Math.max(280,420)*1.8;
+  ctx.save();ctx.translate(tx,ty);ctx.rotate(angle);
+  ctx.drawImage(srcImg,-size/2,-size/2,size,size);
+  ctx.restore();
+  const passes=Math.max(1,Math.round(blur/12));
+  const radius=Math.max(1,Math.round(blur/(passes*2)));
+  let id=ctx.getImageData(0,0,oc.width,oc.height);
+  for(let p=0;p<passes;p++)id=boxBlur(id,radius);
+  ctx.putImageData(id,0,0);
+  return oc;
+}
+
+function gDrawFrame(){
+  if(!gImg)return;
+  const canvas=document.getElementById('g-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const blur=parseInt(document.getElementById('g-blur').value);
+  const opacity=parseInt(document.getElementById('g-opacity').value)/100;
+  const [a1,a2]=getAngles();
+  ctx.fillStyle='#060b21';ctx.fillRect(0,0,W,H);
+  const b1=blurredCanvas(gImg,blur,a1,W*0.65,H*0.25);
+  const b2=blurredCanvas(gImg,blur,a2,W*0.35,H*0.75);
+  ctx.save();ctx.globalAlpha=opacity;ctx.drawImage(b1,0,0);ctx.restore();
+  ctx.save();ctx.globalAlpha=opacity;ctx.drawImage(b2,0,0);ctx.restore();
+  if(gDarkMode==='all'){const amt=parseInt(document.getElementById('g-strength').value)/100;ctx.fillStyle=`rgba(0,0,0,${amt*0.75})`;ctx.fillRect(0,0,W,H);}
+  gAnimFrame=requestAnimationFrame(gDrawFrame);
+}
+
+document.getElementById('g-file-input').addEventListener('change',function(e){
+  const file=e.target.files[0]; if(!file)return;
+  document.getElementById('g-label-text').textContent=file.name;
+  const url=URL.createObjectURL(file);
+  const i=new Image();
+  i.onload=()=>{
+    gImg=i;
+    if(gAnimFrame)cancelAnimationFrame(gAnimFrame);
+    document.getElementById('g-frame').style.display='block';
+    document.getElementById('g-controls').style.display='flex';
+    document.getElementById('g-sample-btn').style.display='block';
+    document.getElementById('g-result').style.display='none';
+    gDrawFrame();
+  };
+  i.src=url;
+});
+
+function setDarkMode(mode){
+  gDarkMode=mode;
+  document.querySelectorAll('.g-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  document.getElementById('g-strength-row').style.display=(mode!=='none')?'flex':'none';
+  document.getElementById('g-threshold-row').style.display=(mode==='selective')?'flex':'none';
+}
+
+function luma(r,g,b){return 0.299*r+0.587*g+0.114*b;}
+function darkenSelective(r,g,b,strength,threshold){
+  const l=luma(r,g,b);if(l<=threshold)return[r,g,b];
+  const excess=(l-threshold)/(255-threshold);const scale=1-excess*strength;
+  return[Math.round(r*scale),Math.round(g*scale),Math.round(b*scale)];
+}
+
+function sampleGradient(){
+  const canvas=document.getElementById('g-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const NUM=parseInt(document.getElementById('g-stops').value);
+  const INSET=Math.round(H*0.04);
+  const strength=parseInt(document.getElementById('g-strength').value)/100;
+  const threshold=parseInt(document.getElementById('g-threshold').value)||140;
+  const stops=[];
+  for(let i=0;i<NUM;i++){
+    const y=Math.round(INSET+(i/(NUM-1))*(H-INSET*2));
+    let r=0,g=0,b=0;const S=16;
+    for(let s=0;s<S;s++){const x=Math.round((s/(S-1))*(W-1));const px=ctx.getImageData(x,y,1,1).data;r+=px[0];g+=px[1];b+=px[2];}
+    let c=[Math.round(r/S),Math.round(g/S),Math.round(b/S)];
+    if(gDarkMode==='selective')c=darkenSelective(c[0],c[1],c[2],strength,threshold);
+    stops.push(c);
+  }
+  buildGradientOutput(stops);
+}
+
+function toHex(c){return '#'+c.map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');}
+
+function buildGradientOutput(stops){
+  const strip=document.getElementById('g-strip');
+  const ctx=strip.getContext('2d');
+  ctx.clearRect(0,0,strip.width,strip.height);
+  const grd=ctx.createLinearGradient(0,0,0,strip.height);
+  stops.forEach((c,i)=>grd.addColorStop(i/(stops.length-1),toHex(c)));
+  ctx.fillStyle=grd;
+  if(ctx.roundRect)ctx.roundRect(0,0,strip.width,strip.height,12);
+  else ctx.rect(0,0,strip.width,strip.height);
+  ctx.fill();
+  const angle=Math.round(150+Math.random()*60);
+  const stopStr=stops.map((c,i)=>`${toHex(c)} ${Math.round((i/(stops.length-1))*100)}%`).join(', ');
+  document.getElementById('g-code-text').textContent=`linear-gradient(${angle}deg, ${stopStr})`;
+  document.getElementById('g-result').style.display='flex';
+}
+
+function copyGradient(){
+  const text=document.getElementById('g-code-text').textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const msg=document.getElementById('g-copied');
+    msg.classList.add('show');
+    setTimeout(()=>msg.classList.remove('show'),1200);
+  });
+}
+
+// init line numbers
+['lyrics','lyrics2','tracklist'].forEach(t=>{
+  const ta=document.getElementById('input-'+t);
+  const ln=document.getElementById('ln-'+t);
+  // init 60 lines
+  ln.innerHTML=Array.from({length:60},(_,i)=>`<span>${String(i+1).padStart(2,'0')}</span>`).join('');
+  // sync scroll
+  ta.addEventListener('scroll',()=>{ln.scrollTop=ta.scrollTop;});
+});
+</script>
+</body>
+</html>
