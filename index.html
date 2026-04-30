@@ -917,7 +917,7 @@ function formatLyrics(rawText) {
 
   const finalLyrics=formattedBlocks.join('\n\n');
   if(metadataFound){
-    return `== 가사 ==\n{{{#!wiki style="margin: 0 auto; width: 100%; max-width: 600px; border-radius: 10px; padding: 30px 17px 25px 17px; background-image: ${bgValue}; color: #FFF" {{{\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="word-break: normal"\n{{{#!wiki style="margin: -5px -10px 15px 0px"\n[[파일:${cvValue}|height=70&border-radius=4px]]{{{#!wiki style="display: inline-block; margin-left: 15px; font-size: 16px; text-align: left; vertical-align: middle;"\n'''${titleValue}'''\n{{{#!wiki style="font-size: 14px; color: rgba(256,256,256,0.6)"\n${artistValue}}}}}}}}}}}${finalLyrics?'\n'+finalLyrics:''}\n}}}}}}}}}`;
+    return `== 가사 ==\n{{{#!wiki style="margin: 0 auto; width: 100%; max-width: 600px; border-radius: 10px; padding: 30px 17px 25px 17px; background-image: ${bgValue}; color: #FFF" {{{\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="word-break: normal"\n{{{#!wiki style="margin: -5px -10px 15px 0px"\n[[파일:${cvValue}|height=70&border-radius=4px]]{{{#!wiki style="display: inline-block; margin-left: 15px; font-size: 16px; text-align: left; vertical-align: middle; max-width: calc(100% - 105px)"\n'''${titleValue}'''\n{{{#!wiki style="font-size: 14px; color: rgba(256,256,256,0.6)"\n${artistValue}}}}}}}}}}${finalLyrics?'\n'+finalLyrics:''}\n}}}}}}}}}`;
   }
   return finalLyrics;
 }
