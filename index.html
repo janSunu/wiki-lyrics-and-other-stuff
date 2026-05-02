@@ -950,7 +950,7 @@ function formatLyrics2(rawText) {
     else{lyricsLines.push(line);}
   }
 
-  const outputHeader=`=== ${title} ===\n{{{#!wiki style="width: 360px; background-image: ${background}; border-radius: 15px; padding: 1em 1em 1em 1em"\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="word-break: normal"\n{{{#FFF\n[youtube(${youtubeId}, height=340, width=340)]\n{{{#!wiki style="margin: 3px 0 -21px 0"\n'''${title}'''\n{{{#!wiki style="font-size: 15px; color: rgba(256,256,256,0.6); margin: 0 0 -20px 0"\n${artist}}}}\n{{{#!wiki style="margin: 2px 0 0 0"\n{{{#!wiki style="width: 330px; height: .3em; padding: 2px 4px; margin: 13px 0 -20px 0; border-radius: 3px; background: rgba(255, 255, 255, 0.28)"\n}}}\n{{{#!wiki style="float: left; margin-left: .16em; margin-top: 0.3em; font-size: .6em; color: rgba(255, 255, 255, 0.28)"\n0:00}}}}}}}\n}}}\n{{{#!wiki style="float: right; margin-right: .15em; margin-top: 0.2em; font-size: .6em; color: rgba(255, 255, 255, 0.28)"\n${duration}}}}}}\n{{{#!wiki style="text-align: center; font-size: 0.9em; color: rgba(256,256,256,0.9)"\n{{{#!folding 가사 펼치기 · 접기\n{{{#!wiki style="text-align: left; margin-top: 1em; font-size: 16px; color: #FFFFFF"`;
+  const outputHeader=`=== ${title} ===\n{{{#!wiki style="width: 360px; background-image: ${background}; border-radius: 15px; padding: 1em 1em 1em 1em"\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="word-break: normal"\n{{{#FFF\n[youtube(${youtubeId}, height=340, width=340)]\n{{{#!wiki style="margin: 3px 0 -21px 0"\n'''${title}'''\n{{{#!wiki style="font-size: 15px; color: rgba(256,256,256,0.6); margin: 0 0 -20px 0"\n${artist}}}}\n{{{#!wiki style="margin: 2px 0 0 0"\n{{{#!wiki style="width: 330px; height: .3em; padding: 2px 4px; margin: 13px 0 -20px 0; border-radius: 3px; background: rgba(255, 255, 255, 0.28)"\n}}}\n{{{#!wiki style="float: left; margin-left: .16em; margin-top: 0.3em; font-size: .6em; color: rgba(255, 255, 255, 0.28)"\n0:00}}}}}}\n}}}\n{{{#!wiki style="float: right; margin-right: .15em; margin-top: 0.2em; font-size: .6em; color: rgba(255, 255, 255, 0.28)"\n${duration}}}}\n{{{#!wiki style="text-align: center; font-size: 0.9em; color: rgba(256,256,256,0.9)"\n{{{#!folding 가사 펼치기 · 접기\n{{{#!wiki style="text-align: left; margin-top: 1em; font-size: 16px; color: #FFFFFF"`;
 
   let processedLyrics=''; let isRight=false,isSpoken=false,lastEng='',lastKor='';
 
@@ -999,7 +999,7 @@ function formatLyrics2(rawText) {
   }
 
   const creditBlock=creditsFromMetadata?`\n\n{{{#!wiki style="text-align: left; margin-top: -0.2em; font-size: 12px; color: #FFFFFF"\n'''Written By:''' ${creditsFromMetadata}}}}`:''
-  return outputHeader+'\n'+processedLyrics+creditBlock+`}}}}}}}}}}}}}}}}}}`;
+  return outputHeader+'\n'+processedLyrics+creditBlock+`}}}}}}}}}}}}}}}}}}}}}`;
 }
 
 // ═══════════════════════════════════════
