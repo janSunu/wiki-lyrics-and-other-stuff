@@ -950,7 +950,7 @@ function formatLyrics2(rawText) {
     else{lyricsLines.push(line);}
   }
 
-  const outputHeader=`=== ${title} ===\n{{{#!wiki style="width: 360px; background-image: ${background}; border-radius: 15px; padding: 1em 1em 1em 1em"\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="word-break: normal"\n{{{#FFF\n[youtube(${youtubeId}, height=340, width=340)]\n{{{#!wiki style="margin: 3px 0 -21px 0"\n'''${title}'''\n{{{#!wiki style="font-size: 15px; color: rgba(256,256,256,0.6); margin: 0 0 -20px 0"\n${artist}}}}\n{{{#!wiki style="margin: 2px 0 0 0"\n{{{#!wiki style="width: 330px; height: .3em; padding: 2px 4px; margin: 13px 0 -20px 0; border-radius: 3px; background: rgba(255, 255, 255, 0.28)"\n}}}\n{{{#!wiki style="float: left; margin-left: .16em; margin-top: 0.3em; font-size: .6em; color: rgba(255, 255, 255, 0.28)"\n0:00}}}}}}\n}}}\n{{{#!wiki style="float: right; margin-right: .15em; margin-top: 0.2em; font-size: .6em; color: rgba(255, 255, 255, 0.28)"\n${duration}}}}}}}\n{{{#!wiki style="text-align: center; font-size: 0.9em; color: rgba(256,256,256,0.9)"\n{{{#!folding 가사 펼치기 · 접기\n{{{#!wiki style="text-align: left; margin-top: 1em; font-size: 16px; color: #FFFFFF"`;
+  const outputHeader=`=== ${title} ===\n{{{#!wiki style="width: 360px; background-image: ${background}; border-radius: 15px; padding: 1em 1em 1em 1em"\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="word-break: normal"\n{{{#FFF\n[youtube(${youtubeId}, height=340, width=340)]\n{{{#!wiki style="margin: 3px 0 -21px 0"\n'''${title}'''\n{{{#!wiki style="font-size: 15px; color: rgba(256,256,256,0.6); margin: 0 0 -20px 0"\n${artist}}}}\n{{{#!wiki style="margin: 2px 0 0 0"\n{{{#!wiki style="width: 330px; height: .3em; padding: 2px 4px; margin: 13px 0 -20px 0; border-radius: 3px; background: rgba(255, 255, 255, 0.28)"\n}}}\n{{{#!wiki style="float: left; margin-left: .16em; margin-top: 0.3em; font-size: .6em; color: rgba(255, 255, 255, 0.28)"\n0:00}}}}}}}\n}}}\n{{{#!wiki style="float: right; margin-right: .15em; margin-top: 0.2em; font-size: .6em; color: rgba(255, 255, 255, 0.28)"\n${duration}}}}}}\n{{{#!wiki style="text-align: center; font-size: 0.9em; color: rgba(256,256,256,0.9)"\n{{{#!folding 가사 펼치기 · 접기\n{{{#!wiki style="text-align: left; margin-top: 1em; font-size: 16px; color: #FFFFFF"`;
 
   let processedLyrics=''; let isRight=false,isSpoken=false,lastEng='',lastKor='';
 
@@ -963,6 +963,27 @@ function formatLyrics2(rawText) {
     if(lower==='[spoken end]'){isSpoken=false;continue;}
     if(lower.startsWith('written by:')){const name=line.split(':').slice(1).join(':').trim();processedLyrics+=`{{{#!wiki style="text-align: left; margin-top: -0.2em; font-size: 12px; color: #FFFFFF"\n'''Written By:''' ${name}}}}\n`;continue;}
     if(lower==='[inst]'||lower==='[instr]'){processedLyrics+=`{{{-2 ● ● ●}}}\n`;continue;}
+    // Section headers: [Verse], [Chorus], [Verse: Kendrick Lamar] etc.
+    if(line.startsWith('[')&&line.endsWith(']')){
+      const hdr=line.slice(1,-1);
+      let lbl='';
+      if(hdr.includes(':')){
+        const pts=hdr.split(':');
+        lbl=pts[0].trim()+": '''"+pts.slice(1).join(':').trim()+"'''";
+      } else {
+        lbl="'''"+hdr+"'''";
+      }
+      processedLyrics+=`{{{#!wiki style="display: inline-block; border-radius: 50px; background: rgba(0,0,0,0.08); font-size: 13px; padding: 2px 9px; border: 1.9px solid rgba(255,255,255,0.4); margin: 8px 0 10px 0"\n${lbl}}}}\n`;
+      continue;
+    }
+    if(line.startsWith('[')&&line.endsWith(']')&&lower!=='[right]'&&lower!=='[right end]'&&lower!=='[rightend]'&&lower!=='[spoken]'&&lower!=='[spoken end]'&&lower!=='[repeat]'){
+      const hdr=line.replace(/^\[|\]$/g,'');
+      let lbl='';
+      if(hdr.includes(':')){const pts=hdr.split(':');lbl=pts[0].trim()+": '''"+pts.slice(1).join(':').trim()+"'''";}
+      else{lbl="'''"+hdr+"'''";}
+      processedLyrics+="{{{#!wiki style=\"display: inline-block; border-radius: 50px; background: rgba(0,0,0,0.08); font-size: 13px; padding: 2px 9px; border: 1.9px solid rgba(255,255,255,0.4); margin: 8px 0 10px -4px\"\n"+lbl+"}}}\n";
+      continue;
+    }
     if(lower==='[repeat]'){processedLyrics+=`{{{#!wiki style="margin-top: .2em; margin-bottom: -1.5em; font-size: 14px; color: rgba(255, 255, 255, 0.5)"\n'''${lastEng}'''\n{{{-2 ${lastKor}}}}}}}}\n`;continue;}
     let currentLine=line; let ignoreTranslation=false;
     if(lower.includes('[ignore]')){ignoreTranslation=true;currentLine=currentLine.replace(/\[ignore\]/gi,'').trim();}
