@@ -1054,7 +1054,7 @@ function formatTracklist(rawText) {
         let nextIsTrack=false;
         for(let j=i+1;j<tracklistBody.length;j++){const nl=tracklistBody[j];if(nl.startsWith('[')&&nl.endsWith(']'))break;if(nl.match(/\s+(\d+:\d+)$/)){nextIsTrack=true;break;}}
         const border=nextIsTrack?`{{{#c7c7c9,#39393a {{{#!wiki style="height: 0; border-top: .0625rem currentcolor solid; margin: .8em 0 .7em 0"\n}}}}}}`:''
-        tracksHtml+=`{{{#!wiki style="float: left; margin-left: ${margin}"\n{{{#9f9f9f,#757575 ${trackNum}}}}}}}{{{#!wiki style="float: right; margin-right: 1.5em"\n{{{#8b8b8b,#7f7f7f ${time}}}}\n}}}{{{#!wiki style="max-width: calc(100% - 50px); word-break: normal"\n${formattedTitle}}}}${border}`;
+        tracksHtml+=`{{{#!wiki style="float: left; margin-left: ${margin}"\n{{{#9f9f9f,#757575 ${trackNum}}}}}}}{{{#!wiki style="float: right; margin-right: 1.5em"\n{{{#8b8b8b,#7f7f7f ${time}}}}\n}}}{{{#!wiki style="max-width: calc(100% - 60px); word-break: normal"\n${formattedTitle}}}}${border}`;
       }
     }
   }
