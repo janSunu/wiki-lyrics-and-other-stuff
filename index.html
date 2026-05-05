@@ -1028,7 +1028,7 @@ function formatTracklist(rawText) {
     } else { tracklistBody.push(line); }
   }
 
-  const headerBlock=`{{{#!wiki style="margin: 0 auto; padding: 5px 0 5px; max-width: 600px; border-radius:14px; font-size:0.9em; color:#fff; background: ${background}; text-align: center"\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="margin: 10px -10px 30px auto"\n[[파일:${cover}|width=90&border-radius=4]]{{{#!wiki style="display: inline-block; margin-left: 20px; font-size: 16px; text-align: left; vertical-align: middle;"\n'''[[${album}|{{{#FFF ${album}}}}]]'''\n{{{#!wiki style="font-size: 15px; color: rgba(256,256,256,0.8); margin: 0 0 -20px 0"\n${artist}}}}\n{{{#!wiki style="margin-top: .3em; font-size: 11px; font-weight: bold; color: rgba(256,256,256,0.6)"\n${genre} · ${year} · ${duration}}}}}}}}}}\n{{{#!wiki style="margin-top: -32px; margin-bottom: 10px; margin-left: 1px; margin-right: 1px; color: rgba(256,256,256,0.9)"\n{{{#!folding 트랙리스트 펼치기 · 접기\n{{{#FFF,#1c1d1f\n{{{#!wiki style="width: 100%; background: currentcolor; padding: .8em 0 1em 3.5em; margin-top: 20px; margin-bottom: 0px; text-align: left; font-size: 14px"`;
+  const headerBlock=`== 트랙리스트 ==\n{{{#!wiki style="margin: 0 auto; padding: 5px 0 5px; max-width: 600px; border-radius:14px; font-size:0.9em; color:#fff; background: ${background}; text-align: center"\n{{{#!wiki style="display: inline; font-family:-apple-system, BlinkMacSystemFont, SF Pro Display, HelveticaNeue, Arial, sans serif"\n{{{#!wiki style="margin: 10px -10px 30px auto"\n[[파일:${cover}|width=90&border-radius=4]]{{{#!wiki style="display: inline-block; margin-left: 20px; font-size: 16px; text-align: left; vertical-align: middle;"\n'''[[${album}|{{{#FFF ${album}}}}]]'''\n{{{#!wiki style="font-size: 15px; color: rgba(256,256,256,0.8); margin: 0 0 -20px 0"\n${artist}}}}\n{{{#!wiki style="margin-top: .3em; font-size: 11px; font-weight: bold; color: rgba(256,256,256,0.6)"\n${genre} · ${year} · ${duration}}}}}}}}}}\n{{{#!wiki style="margin-top: -32px; margin-bottom: 10px; margin-left: 1px; margin-right: 1px; color: rgba(256,256,256,0.9)"\n{{{#!folding 트랙리스트 펼치기 · 접기\n{{{#FFF,#1c1d1f\n{{{#!wiki style="width: 100%; background: currentcolor; padding: .8em 0 1em 3.5em; margin-top: 20px; margin-bottom: 0px; text-align: left; font-size: 14px"`;
 
   const formatTitleWithLink = rawTitle => {
     const colorWrap=t=>`{{{#000,#FFF ${t}}}}`;
@@ -1054,7 +1054,7 @@ function formatTracklist(rawText) {
         let nextIsTrack=false;
         for(let j=i+1;j<tracklistBody.length;j++){const nl=tracklistBody[j];if(nl.startsWith('[')&&nl.endsWith(']'))break;if(nl.match(/\s+(\d+:\d+)$/)){nextIsTrack=true;break;}}
         const border=nextIsTrack?`{{{#c7c7c9,#39393a {{{#!wiki style="height: 0; border-top: .0625rem currentcolor solid; margin: .8em 0 .7em 0"\n}}}}}}`:''
-        tracksHtml+=`${formattedTitle}{{{#!wiki style="float: left; margin-left: ${margin}"\n{{{#9f9f9f,#757575 ${trackNum}}}}}}{{{#!wiki style="float: right; margin-right: 1.5em"\n{{{#8b8b8b,#7f7f7f ${time}}}}\n}}}${border}`;
+        tracksHtml+=`${formattedTitle}{{{#!wiki style="float: left; margin-left: ${margin}"\n{{{#9f9f9f,#757575 ${trackNum}}}}}}}{{{#!wiki style="float: right; margin-right: 1.5em"\n{{{#8b8b8b,#7f7f7f ${time}}}}\n}}}${border}`;
       }
     }
   }
